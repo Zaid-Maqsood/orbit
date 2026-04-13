@@ -1,10 +1,13 @@
 const { Pool } = require('pg');
 
-// DigitalOcean managed database — connects via DATABASE_URL
-const isLocal = process.env.DATABASE_URL?.includes('localhost');
+// Strip sslmode from URL so our explicit ssl config takes full control
+// (pg treats sslmode=require as verify-full which fails on DO's self-signed CA)
+const rawUrl = process.env.DATABASE_URL || '';
+const connectionString = rawUrl.replace(/[?&]sslmode=[^&]*/g, '').replace(/\?$/, '');
+const isLocal = connectionString.includes('localhost');
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString,
   ssl: isLocal ? false : { rejectUnauthorized: false },
   max: 2,
   // Set search_path synchronously at connection time (avoids async race condition
